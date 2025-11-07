@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>土味姐生日快乐！🎂</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: #000; 
+            overflow: hidden; 
+            font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+            height: 100vh;
+            position: relative;
+        }
+        .bg-big-cake {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('https://picsum.photos/id/835/1920/1080');
+            background-size: cover;
+            background-position: center;
+            opacity: 0.2;
+            z-index: 0;
+        }
+        #fireworks { 
+            width: 100vw; 
+            height: 100vh; 
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        .birthday-text {
+            position: absolute;
+            top: 15%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            color: #fff;
+            text-shadow: 0 0 15px #ffd700, 0 0 30px #ff6347, 0 0 45px #ff1493;
+            z-index: 10;
+            transform-origin: center;
+            text-align: center;
+        }
+        .countdown-container {
+            position: absolute;
+            top: 30%;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 90%;
+            max-width: 600px;
+            z-index: 10;
+        }
+        .countdown-item {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(5px);
+            padding: 15px 10px;
+            border-radius: 12px;
+            text-align: center;
+            flex: 1;
+            min-width: 70px;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        .countdown-number {
+            font-size: 32px;
+            font-weight: bold;
+            color: #ffd700;
+            margin-bottom: 5px;
+        }
+        .countdown-label {
+            font-size: 14px;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .wish-text {
+            position: absolute;
+            bottom: 15%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 24px;
+            color: #fff;
+            text-align: center;
+            line-height: 1.6;
+            padding: 0 20px;
+            text-shadow: 0 0 10px #ff6347;
+            z-index: 10;
+        }
+        .control-btn {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 69, 0, 0.8);
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            font-size: 24px;
+            color: #fff;
+            cursor: pointer;
+            box-shadow: 0 0 20px #ff6347;
+            transition: all 0.3s ease;
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .control-btn:hover {
+            transform: translateX(-50%) scale(1.1);
+            background: #ff4500;
+        }
+        .control-btn.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            opacity: 0;
+            animation: confetti-fall 5s ease-in-out infinite;
+            z-index: 5;
+        }
+        @keyframes confetti-fall {
+            0% {
+                transform: translateY(-100vh) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100vh) rotate(720deg);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-big-cake"></div>
+    <div class="birthday-text">土味姐生日快乐！🎂</div>
+    
+    <div class="countdown-container">
+        <div class="countdown-item">
+            <div id="hours" class="countdown-number">00</div>
+            <div class="countdown-label">时</div>
+        </div>
+        <div class="countdown-item">
+            <div id="minutes" class="countdown-number">00</div>
+            <div class="countdown-label">分</div>
+        </div>
+        <div class="countdown-item">
+            <div id="seconds" class="countdown-number">00</div>
+            <div class="countdown-label">秒</div>
+        </div>
+    </div>
+    
+    <div class="wish-text">
+        愿你新岁无忧，暴富暴美<br>
+        被全世界温柔以待，生日快乐！
+    </div>
+    
+    <canvas id="fireworks"></canvas>
+    <button id="startBtn" class="control-btn">▶️ 开始祝福</button>
+    
+    <audio id="birthdayMusic" loop>
+        <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
+        您的浏览器不支持音频播放。
+    </audio>
+    <audio id="fireworkSound">
+        <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-27.mp3" type="audio/mpeg">
+        您的浏览器不支持音频播放。
+    </audio>
+
+    <script>
+        const canvas = document.getElementById('fireworks');
+        const ctx = canvas.getContext('2d');
+        const birthdayText = document.querySelector('.birthday-text');
+        const startBtn = document.getElementById('startBtn');
+        const birthdayMusic = document.getElementById('birthdayMusic');
+        const fireworkSound = document.getElementById('fireworkSound');
+        const hoursEl = document.getElementById('hours');
+        const minutesEl = document.getElementById('minutes');
+        const secondsEl = document.getElementById('seconds');
+        
+        let fireworks = [];
+        let particles = [];
+        let isActive = false;
+        let textRotation = 0;
+        let textScale = 1;
+        let scaleDirection = 1;
+        const BIRTHDAY_DATE = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate(), 0, 0, 0);
+        
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        function updateCountdown() {
+            const now = new Date();
+            const timeDiff = BIRTHDAY_DATE - now;
+            
+            const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+            
+            hoursEl.textContent = hours.toString().padStart(2, '0');
+            minutesEl.textContent = minutes.toString().padStart(2, '0');
+            secondsEl.textContent = seconds.toString().padStart(2, '0');
+            
+            if (timeDiff <= 0) {
+                hoursEl.textContent = '00';
+                minutesEl.textContent = '00';
+                secondsEl.textContent = '00';
+                document.querySelector('.wish-text').innerHTML = '生日当天快乐加倍！🎊<br>愿你岁岁常欢愉，年年皆胜意！';
+                createConfetti();
+            }
+        }
+        
+        function animateText() {
+            if (!isActive) return;
+            textRotation += 0.5;
+            textScale += scaleDirection * 0.005;
+            if (textScale >= 1.1) scaleDirection = -1;
+            if (textScale <= 0.9) scaleDirection = 1;
+            birthdayText.style.transform = `translate(-50%, -50%) rotate(${textRotation}deg) scale(${textScale})`;
+            requestAnimationFrame(animateText);
+        }
+        
+        function createConfetti() {
+            const colors = ['#ffd700', '#ff6347', '#ff1493', '#32cd32', '#1e90ff', '#9370db', '#00ced1'];
+            for (let i = 0; i < 150; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = `${Math.random() * 100}vw`;
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.animationDelay = `${Math.random() * 5}s`;
+                confetti.style.width = `${Math.random() * 10 + 5}px`;
+                confetti.style.height = `${Math.random() * 10 + 5}px`;
+                document.body.appendChild(confetti);
+                setTimeout(() => confetti.remove(), 5000);
+            }
+        }
+        
+        function getRandomColor() {
+            const colors = ['#ff3333', '#33ff33', '#3333ff', '#ffff33', '#ff8833', '#aa33ff', '#33ffff', '#ff33aa'];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+        
+        class Firework {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = canvas.height;
+                this.speed = Math.random() * 8 + 10;
+                this.color = getRandomColor();
+                this.gravity = 0.1;
+                this.exploded = false;
+                this.explodeTimer = Math.random() * 60 + 60;
+                this.trail = [];
+            }
+            
+            update() {
+                if (!this.exploded) {
+                    this.y -= this.speed;
+                    this.speed -= this.gravity;
+                    this.explodeTimer--;
+                    this.trail.push({x: this.x, y: this.y, life: 10});
+                    this.trail = this.trail.filter(p => p.life-- > 0);
+                    if (this.explodeTimer <= 0 || this.speed <= 0) {
+                        this.explode();
+                        this.exploded = true;
+                        fireworkSound.currentTime = 0;
+                        fireworkSound.play().catch(() => {});
+                    }
+                } else {
+                    this.particles.forEach(p => p.update());
+                    this.particles = this.particles.filter(p => p.life > 0);
+                }
+            }
+            
+            draw() {
+                if (!this.exploded) {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, 4, 0, Math.PI * 2);
+                    ctx.fillStyle = this.color;
+                    ctx.fill();
+                    this.trail.forEach((p, i) => {
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, 2 - i * 0.2, 0, Math.PI * 2);
+                        ctx.fillStyle = this.color;
+                        ctx.fill();
+                    });
+                } else {
+                    this.particles.forEach(p => p.draw());
+                }
+            }
+            
+            explode() {
+                this.particles = [];
+                for (let i = 0; i < 150; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = Math.random() * 6 + 2;
+                    this.particles.push(new Particle(
+                        this.x, this.y,
+                        speed * Math.cos(angle),
+                        speed * Math.sin(angle),
+                        this.color
+                    ));
+                }
+            }
+        }
+        
+        class Particle {
+            constructor(x, y, vx, vy, color) {
+                this.x = x;
+                this.y = y;
+                this.vx = vx;
+                this.vy = vy;
+                this.color = color;
+                this.gravity = 0.05;
+                this.life = 120;
+                this.alpha = 1;
+            }
+            
+            update() {
+                this.vy += this.gravity;
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life--;
+                this.alpha = this.life / 120;
+            }
+            
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.alpha;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+        
+        function animate() {
+            if (!isActive) return;
+            
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            if (Math.random() < 0.02) {
+                fireworks.push(new Firework());
+            }
+            
+            fireworks.forEach(firework => {
+                firework.update();
+                firework.draw();
+            });
+            fireworks = fireworks.filter(f => !f.exploded || f.particles.length > 0);
+            
+            requestAnimationFrame(animate);
+        }
+        
+        startBtn.addEventListener('click', () => {
+            isActive = true;
+            startBtn.classList.add('hidden');
+            
+            birthdayMusic.play().then(() => {
+                animateText();
+                animate();
+                updateCountdown();
+                setInterval(updateCountdown, 1000);
+                fireworks.push(new Firework());
+                createConfetti();
+            }).catch(() => {
+                alert('请点击页面任意位置后重试～');
+                isActive = false;
+                startBtn.classList.remove('hidden');
+            });
+        });
+        
+        document.addEventListener('click', () => {
+            if (!isActive) {
+                birthdayMusic.play().then(() => {
+                    isActive = true;
+                    startBtn.classList.add('hidden');
+                    animateText();
+                    animate();
+                    updateCountdown();
+                    setInterval(updateCountdown, 1000);
+                    fireworks.push(new Firework());
+                    createConfetti();
+                });
+            }
+        }, { once: true });
+        
+        updateCountdown();
+    </script>
+</body>
+</html>
